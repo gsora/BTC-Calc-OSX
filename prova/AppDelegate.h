@@ -19,5 +19,6 @@
 - (IBAction)actionAggiorna:(id)sender;
 @property (weak) IBOutlet NSTextField *lastUpdate;
 @property (weak) IBOutlet NSProgressIndicator *progressMe;
+@property (weak) IBOutlet NSPopUpButton *btcSource;
 
 @end

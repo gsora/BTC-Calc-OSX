@@ -11,6 +11,8 @@
 @implementation AppDelegate
 
 float getGoxValueFloat(void);
+float getBitstampValueFloat(void);
+float getTheRockTradingValueFloat(void);
 //NSString *getGoxValueStr(void);
 
 // Mt.Gox value defined as a global float
@@ -37,23 +39,49 @@ float getGoxValueFloat(void) {
     return value;
 }
 
+float getBitstampValueFloat(void) {
+    NSURLRequest *bstampJSONRequest = [NSURLRequest requestWithURL:[NSURL URLWithString:@"https://www.bitstamp.net/api/ticker/"]];
+    NSData *bstampJSONResponse = [NSURLConnection sendSynchronousRequest:bstampJSONRequest returningResponse:nil error:nil];
+    NSError *jsonParsingError = nil;
+    NSMutableDictionary *bstampData = [NSJSONSerialization JSONObjectWithData:bstampJSONResponse options:NSJSONReadingMutableContainers| NSJSONReadingMutableLeaves error:&jsonParsingError];
+    NSLog(@"Called getBitstampValueFloat, got BTC value from Bitstamp: (float)%@", bstampData[@"last"]);
+    NSNumber *conversionFactor = bstampData[@"last"];
+    float value = [conversionFactor floatValue];
+    return value;
+}
+
+float getTheRockTradingValueFloat(void) {
+    NSURLRequest *trtJSONRequest = [NSURLRequest requestWithURL:[NSURL URLWithString:@"https://www.therocktrading.com/api/ticker/BTCEUR"]];
+    NSData *trtJSONResponse = [NSURLConnection sendSynchronousRequest:trtJSONRequest returningResponse:nil error:nil];
+    NSError *jsonParsingError = nil;
+    NSDictionary *trtData = [NSJSONSerialization JSONObjectWithData:trtJSONResponse options:NSJSONReadingMutableContainers| NSJSONReadingMutableLeaves error:&jsonParsingError];
+    NSArray *fetched = [trtData objectForKey:@"result"];
+    NSNumber *conversionFactor;
+    for (NSArray *arr in fetched) {
+        conversionFactor = [arr valueForKey:@"last"];
+    }
+    //NSLog(@"Called getBitstampValueFloat, got BTC value from TheRockTrading: (float)%@", fetched);
+    float value = [conversionFactor floatValue];
+    return value;
+}
+
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
-    [_progressMe setHidden:false];
-    [_buttonCalcola setEnabled:false];
-    [_buttonAggiorna setEnabled:false];
-    [_progressMe startAnimation:self];
+    [self.progressMe setHidden:false];
+    [self.buttonCalcola setEnabled:false];
+    [self.buttonAggiorna setEnabled:false];
+    [self.progressMe startAnimation:self];
     NSDate *today = [NSDate date];
     NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
     // display in 12HR/24HR (i.e. 11:25PM or 23:25) format according to User Settings
     [dateFormatter setTimeStyle:NSDateFormatterShortStyle];
     NSString *currentTime = [dateFormatter stringFromDate:today];
-    [_lastUpdate setStringValue: [NSString stringWithFormat: @"Last update:\n %@", currentTime]];
+    [_lastUpdate setStringValue: [NSString stringWithFormat: @"Last conversion rate update: %@", currentTime]];
     btcValue = getGoxValueFloat();
-    [_progressMe stopAnimation:self];
-    [_progressMe setHidden:true];
-    [_buttonCalcola setEnabled:true];
-    [_buttonAggiorna setEnabled:true];
+    [self.progressMe stopAnimation:self];
+    [self.progressMe setHidden:true];
+    [self.buttonCalcola setEnabled:true];
+    [self.buttonAggiorna setEnabled:true];
 }
 
 - (IBAction)actionCalcola:(id)sender {
@@ -75,20 +103,27 @@ float getGoxValueFloat(void) {
     }
 }
 - (IBAction)actionAggiorna:(id)sender {
-    [_progressMe setHidden:false];
-    [_buttonCalcola setEnabled:false];
-    [_buttonAggiorna setEnabled:false];
+    [_progressMe setHidden:NO];
     [_progressMe startAnimation:self];
     NSDate *today = [NSDate date];
     NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
     // display in 12HR/24HR (i.e. 11:25PM or 23:25) format according to User Settings
     [dateFormatter setTimeStyle:NSDateFormatterShortStyle];
     NSString *currentTime = [dateFormatter stringFromDate:today];
-    [_lastUpdate setStringValue: [NSString stringWithFormat: @"Last update:\n %@", currentTime]];
-    btcValue = getGoxValueFloat();
+    [_lastUpdate setStringValue: [NSString stringWithFormat: @"Last conversion rate update: %@", currentTime]];
+
+    if ([_btcSource indexOfSelectedItem] == 0) {
+        NSLog(@"Selected Mt.Gox as BTC value update source");
+        btcValue = getGoxValueFloat();
+    } else if([_btcSource indexOfSelectedItem] == 1) {
+        NSLog(@"Selected Bitstamp as BTC value update source");
+        btcValue = getBitstampValueFloat();
+    } else if([_btcSource indexOfSelectedItem] == 2) {
+        NSLog(@"Selected TheRockTrading as BTC value update source");
+        btcValue = getTheRockTradingValueFloat();
+    }
+    
     [_progressMe stopAnimation:self];
-    [_progressMe setHidden:true];
-    [_buttonCalcola setEnabled:true];
-    [_buttonAggiorna setEnabled:true];
+    [_progressMe setHidden:YES];
 }
 @end
